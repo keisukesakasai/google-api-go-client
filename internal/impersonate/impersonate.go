@@ -36,6 +36,8 @@ func TokenSource(ctx context.Context, ts oauth2.TokenSource, config *Config) (oa
 	if len(config.Scopes) == 0 {
 		return nil, fmt.Errorf("impersonate: scopes must be provided")
 	}
+	fmt.Println("config.Target: ", config.Target)
+	fmt.Println("formatIAMServiceAccountName(config.Target)", formatIAMServiceAccountName(config.Target))
 	its := impersonatedTokenSource{
 		ctx:  ctx,
 		ts:   ts,
