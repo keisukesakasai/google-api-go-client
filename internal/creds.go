@@ -61,6 +61,7 @@ func baseCreds(ctx context.Context, ds *DialSettings) (*google.Credentials, erro
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Cred.JSON: ", cred.JSON)
 	if len(cred.JSON) > 0 {
 		return credentialsFromJSON(ctx, cred.JSON, ds)
 	}

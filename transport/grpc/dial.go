@@ -10,6 +10,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -156,6 +157,7 @@ func dial(ctx context.Context, insecure bool, o *internal.DialSettings) (*grpc.C
 		)
 
 		// Attempt Direct Path:
+		fmt.Println("OnGCE", metadata.OnGCE())
 		if isDirectPathEnabled(endpoint, o) && isTokenSourceDirectPathCompatible(creds.TokenSource, o) && metadata.OnGCE() {
 			// Overwrite all of the previously specific DialOptions, DirectPath uses its own set of credentials and certificates.
 			grpcOpts = []grpc.DialOption{
