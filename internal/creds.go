@@ -31,6 +31,7 @@ func Creds(ctx context.Context, ds *DialSettings) (*google.Credentials, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("ds.ImpersonationConfig: ", ds.ImpersonationConfig)
 	if ds.ImpersonationConfig != nil {
 		return impersonateCredentials(ctx, creds, ds)
 	}

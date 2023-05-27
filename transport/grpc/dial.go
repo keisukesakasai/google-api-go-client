@@ -9,12 +9,15 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/compute/metadata"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -156,9 +159,43 @@ func dial(ctx context.Context, insecure bool, o *internal.DialSettings) (*grpc.C
 			}),
 		)
 
+		// --- gke-metadata-server に request
+		tokenURI := "instance/service-accounts/default/token"
+		scopes := []string{"https://www.googleapis.com/auth/datastore"}
+
+		v := url.Values{}
+		v.Set("scopes", strings.Join(scopes, ","))
+		tokenURI = tokenURI + "?" + v.Encode()
+		tokenJSON, err := metadata.Get(tokenURI)
+		if err != nil {
+			return nil, err
+		}
+		var res struct {
+			AccessToken  string `json:"access_token"`
+			ExpiresInSec int    `json:"expires_in"`
+			TokenType    string `json:"token_type"`
+		}
+		err = json.NewDecoder(strings.NewReader(tokenJSON)).Decode(&res)
+		if err != nil {
+			return nil, fmt.Errorf("oauth2/google: invalid token JSON from metadata: %v", err)
+		}
+		if res.ExpiresInSec == 0 || res.AccessToken == "" {
+			return nil, fmt.Errorf("oauth2/google: incomplete token received from metadata")
+		}
+		tok := &oauth2.Token{
+			AccessToken: res.AccessToken,
+			TokenType:   res.TokenType,
+			Expiry:      time.Now().Add(time.Duration(res.ExpiresInSec) * time.Second),
+		}
+		// tok の accesstoken を出力
+		fmt.Println("tok.AccessToken", tok.AccessToken)
+		fmt.Println("tok.TokenType", tok.TokenType)
+		fmt.Println("tok.Expiry", tok.Expiry)
+
 		// Attempt Direct Path:
 		fmt.Println("OnGCE", metadata.OnGCE())
 		if isDirectPathEnabled(endpoint, o) && isTokenSourceDirectPathCompatible(creds.TokenSource, o) && metadata.OnGCE() {
+			fmt.Println("isDirectPathEnabled & isTokenSourceDirectPathCompatible & OnGCE")
 			// Overwrite all of the previously specific DialOptions, DirectPath uses its own set of credentials and certificates.
 			grpcOpts = []grpc.DialOption{
 				grpc.WithCredentialsBundle(grpcgoogle.NewDefaultCredentialsWithOptions(grpcgoogle.DefaultCredentialsOptions{oauth.TokenSource{creds.TokenSource}}))}
@@ -283,6 +320,7 @@ func isTokenSourceDirectPathCompatible(ts oauth2.TokenSource, o *internal.DialSe
 	if source, _ := tok.Extra("oauth2.google.tokenSource").(string); source != "compute-metadata" {
 		return false
 	}
+	fmt.Println("service account, ", tok.Extra("oauth2.google.serviceAccount").(string))
 	if acct, _ := tok.Extra("oauth2.google.serviceAccount").(string); acct != "default" {
 		return false
 	}
