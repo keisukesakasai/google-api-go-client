@@ -38,15 +38,19 @@ func Creds(ctx context.Context, ds *DialSettings) (*google.Credentials, error) {
 }
 
 func baseCreds(ctx context.Context, ds *DialSettings) (*google.Credentials, error) {
+	fmt.Println("ds.InternalCredentials: ", ds.InternalCredentials)
 	if ds.InternalCredentials != nil {
 		return ds.InternalCredentials, nil
 	}
+	fmt.Println("ds.Credentials: ", ds.Credentials)
 	if ds.Credentials != nil {
 		return ds.Credentials, nil
 	}
+	fmt.Println("ds.CredentialsJSON: ", ds.CredentialsJSON)
 	if ds.CredentialsJSON != nil {
 		return credentialsFromJSON(ctx, ds.CredentialsJSON, ds)
 	}
+	fmt.Println("ds.CredentialsFile: ", ds.CredentialsFile)
 	if ds.CredentialsFile != "" {
 		data, err := ioutil.ReadFile(ds.CredentialsFile)
 		if err != nil {
@@ -54,6 +58,7 @@ func baseCreds(ctx context.Context, ds *DialSettings) (*google.Credentials, erro
 		}
 		return credentialsFromJSON(ctx, data, ds)
 	}
+	fmt.Println("ds.TokenSource: ", ds.TokenSource)
 	if ds.TokenSource != nil {
 		return &google.Credentials{TokenSource: ds.TokenSource}, nil
 	}
